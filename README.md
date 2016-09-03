@@ -1,6 +1,7 @@
 # pru-emulator
 
 [![Build Status](https://travis-ci.org/vlsi/pru-emulator.svg?branch=master)](https://travis-ci.org/vlsi/pru-emulator)
+[![codecov](https://codecov.io/gh/vlsi/pru-emulator/branch/master/graph/badge.svg)](https://codecov.io/gh/vlsi/pru-emulator)
 
 This is a java emulator for TI PRU CPU
 
