@@ -3,6 +3,7 @@ package com.github.vlsi.pru.plc110;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class Pru {
@@ -35,15 +36,48 @@ public class Pru {
       pc++;
       return;
     }
+    if (ins instanceof JumpInstruction) {
+      JumpInstruction jmp = (JumpInstruction) ins;
+      if (jmp.op == Format2Instruction.Operation.JAL) {
+        // Return address is stored for JAL only
+        setReg(jmp.dstRegister, pc + 1);
+      }
+      pc = getOp2(jmp.op2, jmp.op2IsRegister);
+    }
+    if (ins instanceof LeftMostBitDetectInstruction) {
+      execLeftMostBitDetect((LeftMostBitDetectInstruction) ins);
+      pc++;
+      return;
+    }
+    if (ins instanceof QuickBranchInstruction) {
+      pc = execQuickBranch((QuickBranchInstruction) ins);
+      return;
+    }
     throw new IllegalStateException("Unsupported instruction " + ins);
+  }
+
+  private void execLeftMostBitDetect(LeftMostBitDetectInstruction ins) {
+    LeftMostBitDetectInstruction lmbd = ins;
+    int op2 = getOp2(lmbd.op2, lmbd.op2IsRegister);
+    int src = getReg(lmbd.srcRegister);
+    if ((op2 & 1) == 0) {
+      int srcMask = RegisterField.ofMask(lmbd.srcRegister >> 5).getBitMask();
+      src ^= srcMask;
+    }
+    int res = 31 - Integer.numberOfLeadingZeros(src);
+    setReg(lmbd.dstRegister, res < 0 ? 32 : res);
+  }
+
+  private int getOp2(int op2, boolean op2IsRegister) {
+    if (op2IsRegister) {
+      return getReg(op2);
+    }
+    return op2;
   }
 
   private void execArithmetic(ArithmeticInstruction ins) {
     int src = getReg(ins.srcRegister);
-    int op2 = ins.op2;
-    if (ins.op2IsRegister) {
-      op2 = getReg(op2);
-    }
+    int op2 = getOp2(ins.op2, ins.op2IsRegister);
     int res = 0;
     int resMask = ins.dstField.getBitMask();
     switch (ins.operation) {
@@ -126,8 +160,39 @@ public class Pru {
     setReg(ins.dstRegister, res);
   }
 
+  private int execQuickBranch(QuickBranchInstruction ins) {
+    int op1 = getReg(ins.srcRegister);
+    int op2 = getOp2(ins.op2, ins.op2IsRegister);
+    if (ins.isBitTest()) {
+      int bit = (1 << (op2 & 31));
+      int bitValue = op1 & bit;
+      if (!(ins.operation == QuickBranchInstruction.Operation.BC && bitValue == 0
+          || ins.operation == QuickBranchInstruction.Operation.BS && bitValue != 0)) {
+        return pc + 1;
+      }
+    } else {
+      QuickBranchInstruction.Operation op = ins.operation;
+
+      if (!(op == QuickBranchInstruction.Operation.LT && op2 < op1
+          || op == QuickBranchInstruction.Operation.EQ && op2 == op1
+          || op == QuickBranchInstruction.Operation.LE && op2 <= op1
+          || op == QuickBranchInstruction.Operation.GT && op2 > op1
+          || op == QuickBranchInstruction.Operation.NE && op2 != op1
+          || op == QuickBranchInstruction.Operation.GE && op2 >= op1
+          || op == QuickBranchInstruction.Operation.A)) {
+        return pc + 1;
+      }
+    }
+    return pc + ins.offset;
+  }
+
   public void setInstructions(List<Instruction> instructions) {
+    instructionStream.clear();
     instructionStream.addAll(instructions);
+  }
+
+  public void setInstructions(Instruction... instructions) {
+    setInstructions(Arrays.asList(instructions));
   }
 
   public void setPc(int pc) {
@@ -190,4 +255,38 @@ public class Pru {
     registers.putInt(offset, value);
   }
 
+  public String printState() {
+    StringBuffer sb = new StringBuffer();
+    sb.append("pc: ").append(pc).append('\n');
+    sb.append("carry: ").append(carry).append('\n');
+
+    sb.append("Instructions around pc\n");
+    for (int i = Math.max(0, pc - 5); i < Math.min(instructionStream.size(), pc + 5); i++) {
+      sb.append(i).append(": ").append(instructionStream.get(i));
+      if (i == pc) {
+        sb.append(" // <-- PC");
+      }
+      sb.append('\n');
+    }
+
+    for (int i = 0; i < 31; i++) {
+      int reg = getReg(RegisterField.dw.fullMask(i));
+      sb.append("R").append(i).append(": ");
+      String hex = Integer.toUnsignedString(reg, 16);
+      sb.append("0x");
+      for (int j = hex.length(); j < 8; j++) {
+        sb.append('0');
+      }
+      sb.append(hex);
+      sb.append(" ").append(Integer.toString(reg));
+      sb.append(", s: ").append(Short.toString((short) (reg >> 16)));
+      sb.append(" ").append(Short.toString((short) (reg & 0xffff)));
+      sb.append(", b: ").append(Byte.toString((byte) (reg >> 24)));
+      sb.append(" ").append(Byte.toString((byte) (reg >> 16)));
+      sb.append(" ").append(Byte.toString((byte) (reg >> 8)));
+      sb.append(" ").append(Byte.toString((byte) (reg & 0xff)));
+      sb.append('\n');
+    }
+    return sb.toString();
+  }
 }

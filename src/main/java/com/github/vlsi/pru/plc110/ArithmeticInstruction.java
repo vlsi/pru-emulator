@@ -59,7 +59,8 @@ public class ArithmeticInstruction extends Instruction {
         // op2
         (byte) ((code >> 16) & 0xff)
     );
-    assert (code >>> 29) == 0 : "Instruction format should be 0b000";
+    assert (code >>> 29) == 0 : "Instruction format should be 0b000, given "
+        + Integer.toBinaryString(code >>> 29);
   }
 
   public ArithmeticInstruction(
@@ -81,12 +82,9 @@ public class ArithmeticInstruction extends Instruction {
 
   @Override
   public String toString() {
-    return "ArithmeticInstruction{" +
-        "operation=" + operation +
-        ", dstRegister=" + RegisterField.fullName(dstRegister) +
-        ", srcRegister=" + RegisterField.fullName(dstRegister) +
-        ", op2=" + (op2IsRegister ? RegisterField.fullName(op2) : op2) +
-        ", op2IsRegister=" + op2IsRegister +
-        '}';
+    return operation + " " +
+        RegisterField.fullName(dstRegister) +
+        ", " + RegisterField.fullName(srcRegister) +
+        ", " + (op2IsRegister ? RegisterField.fullName(op2) : op2);
   }
 }

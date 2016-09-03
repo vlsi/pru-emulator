@@ -4,6 +4,7 @@ import com.github.vlsi.pru.plc110.ArithmeticInstruction;
 import com.github.vlsi.pru.plc110.Decoder;
 import com.github.vlsi.pru.plc110.LdiInstruction;
 import com.github.vlsi.pru.plc110.Pru;
+import com.github.vlsi.pru.plc110.QuickBranchInstruction;
 import com.github.vlsi.pru.plc110.RegisterField;
 import org.testng.Assert;
 import org.testng.annotations.Test;
@@ -44,6 +45,22 @@ public class CpuEmulatorTest {
     cpu.tick();
 
     Assert.assertEquals(cpu.getReg(1, RegisterField.w1), value);
+  }
+
+  @Test
+  public void qbgtNegativeOffset() {
+    Pru cpu = new Pru();
+    ByteBuffer bb = ByteBuffer.allocate(4);
+    int offset = -43;
+    bb.putInt(new QuickBranchInstruction(
+        QuickBranchInstruction.Operation.GT, (short) offset, 1, RegisterField.w1,
+        (byte) 42).code);
+    bb.flip();
+    cpu.setInstructions(new Decoder().decode(bb));
+
+    cpu.tick();
+
+    Assert.assertEquals(cpu.getPc(), offset);
   }
 
   @Test

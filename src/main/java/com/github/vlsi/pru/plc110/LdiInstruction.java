@@ -24,9 +24,8 @@ public class LdiInstruction extends Format2Instruction {
 
   @Override
   public String toString() {
-    return "LdiInstruction{" +
-        "dstRegister=" + RegisterField.fullName(dstRegister) +
-        ", value=" + value +
-        '}';
+    return op + " " +
+        RegisterField.fullName(dstRegister) +
+        ", " + value;
   }
 }

@@ -20,12 +20,12 @@ public class DecoderTest {
 
   @Test
   public void decodeAddSub() {
-    assertDecode(new int[]{0x00e1e1e1, 0x05018181},
-        "ArithmeticInstruction{operation=ADD, dstRegister=R1, srcRegister=R1, op2=R1, op2IsRegister=true}\n" +
-            "ArithmeticInstruction{operation=SUB, dstRegister=R1.w0, srcRegister=R1.w0, op2=1, op2IsRegister=false}");
+    assertDecode("ADD R1, R1, R1\n" +
+            "SUB R1.w0, R1.w0, 1",
+        0x00e1e1e1, 0x05018181);
   }
 
-  private void assertDecode(int[] code, String expected) {
+  private void assertDecode(String expected, int... code) {
     int capacity = code.length * 4;
     ByteBuffer bb = ByteBuffer.allocate(capacity);
     bb.asIntBuffer().put(code);
@@ -38,8 +38,32 @@ public class DecoderTest {
 
   @Test
   public void decodeNot() {
-    assertDecode(new int[]{0x1700e1e1},
-        "ArithmeticInstruction{operation=NOT, dstRegister=R1, srcRegister=R1, op2=0, op2IsRegister=false}");
+    assertDecode("NOT R1, R1, 0",
+        0x1700e1e1);
+  }
+
+  @Test
+  public void decodeQBGT() {
+    assertDecode("QBGT offset=3, R1, 0",
+        0x6100e103);
+  }
+
+  @Test
+  public void decodeQBA2() {
+    assertDecode("QBA offset=2, R0.b0, 0",
+        0x79000002);
+  }
+
+  @Test
+  public void decodeLsl() {
+    assertDecode("LSL R1, R1, 5",
+        0x0905e1e1);
+  }
+
+  @Test
+  public void decodeLmbd() {
+    assertDecode("LMBD R1, R1, 1",
+        0x2701e1e1);
   }
 
 }

@@ -15,11 +15,22 @@ License
 
 The library is distributed under terms of MIT license.
 
+TODO
+----
+
+- Interrupts
+- GPIO (explicit API to set/get IO values)
+- Control registers, DDR
+- Dual-PRU emulation (cross-PRU memory mapping)
+
+
+
 Changelog
 ---------
 
 v1.0.0-SNAPSHOT
-- Simple arithmetic istructions are implemented
+- Supported instructions: arithmetic, LMBD, LDI, JAL, JMP, QB
+- Not yet implemented: LBBO/SBBO, LBCO/SBCO, SCAN, HLT, SLP
 
 Author
 ------

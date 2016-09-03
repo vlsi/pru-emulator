@@ -1,6 +1,6 @@
 package com.github.vlsi.pru.plc110;
 
-public class Format2Instruction extends Instruction {
+public abstract class Format2Instruction extends Instruction {
   public enum Operation {
     JMP(0),
     JAL(1),
@@ -31,7 +31,11 @@ public class Format2Instruction extends Instruction {
     switch (op) {
       case 2:
         return new LdiInstruction(code);
-
+      case 0:
+      case 1:
+        return new JumpInstruction(code);
+      case 3:
+        return new LeftMostBitDetectInstruction(code);
       default:
         throw new IllegalArgumentException("Unsupported format 2 instruction code " + op);
     }
