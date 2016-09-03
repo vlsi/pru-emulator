@@ -12,6 +12,11 @@ cache:
 jdk:
   - oraclejdk8
 
+addons:
+  apt:
+    packages:
+      - oracle-java8-installer
+
 script:
   - mvn package -B -V -P coverage
 
