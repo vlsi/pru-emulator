@@ -11,3 +11,9 @@ cache:
 
 jdk:
   - oraclejdk8
+
+script:
+  - mvn package -B -V -P coverage
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
