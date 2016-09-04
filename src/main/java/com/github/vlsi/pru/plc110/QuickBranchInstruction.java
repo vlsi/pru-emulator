@@ -36,7 +36,7 @@ public class QuickBranchInstruction extends Instruction {
   public final short offset;
   public final boolean op2IsRegister;
   public final byte op2;
-  public final int srcRegister;
+  public final Register srcRegister;
 
   public QuickBranchInstruction(int code) {
     super(code);
@@ -55,18 +55,18 @@ public class QuickBranchInstruction extends Instruction {
     this.offset = offset;
     this.op2IsRegister = (code & (1 << 24)) == 0;
     this.op2 = (byte) ((code >> 16) & 0xff);
-    this.srcRegister = (code >> 8) & 0xff;
+    this.srcRegister = Register.ofMask((code >> 8) & 0xff);
   }
 
   private QuickBranchInstruction(
       Operation op,
-      short offset, int srcRegister,
-      RegisterField srcField, boolean op2IsRegister, byte op2) {
+      short offset, Register srcRegister,
+      boolean op2IsRegister, byte op2) {
     super(op.header()
         | (((offset >> 8) & 3) << 25)
         | (op2IsRegister ? 0 : 1 << 24)
         | ((op2 & 0xff) << 16)
-        | (srcField.fullMask(srcRegister) << 8)
+        | (srcRegister.mask() << 8)
         | (offset & 0xff));
     assert offset < 1 << 10 && offset >= -1 << 10
         : "Branch offset should fit into 10 bits. Given " + offset;
@@ -74,27 +74,27 @@ public class QuickBranchInstruction extends Instruction {
     this.offset = offset;
     this.op2IsRegister = op2IsRegister;
     this.op2 = op2;
-    this.srcRegister = srcField.fullMask(srcRegister);
+    this.srcRegister = srcRegister;
   }
 
   public QuickBranchInstruction(
       Operation op, short offset,
-      int srcRegister, RegisterField srcField,
+      Register srcRegister,
       byte op2) {
-    this(op, offset, srcRegister, srcField, false, op2);
+    this(op, offset, srcRegister, false, op2);
   }
 
   public QuickBranchInstruction(
       Operation op, short offset,
-      int srcRegister, RegisterField srcField,
-      int op2Register, RegisterField op2Field) {
-    this(op, offset, srcRegister, srcField, true,
-        (byte) op2Field.fullMask(op2Register));
+      Register srcRegister,
+      Register op2Register) {
+    this(op, offset, srcRegister, true,
+        (byte) op2Register.mask());
   }
 
   public QuickBranchInstruction(
       short offset) {
-    this(Operation.A, offset, 1, RegisterField.dw, false, (byte) 0);
+    this(Operation.A, offset, new Register(1, RegisterField.dw), false, (byte) 0);
   }
 
   public boolean isBitTest() {
@@ -105,7 +105,7 @@ public class QuickBranchInstruction extends Instruction {
   public String toString() {
     return "QB" + operation + " " +
         "offset=" + offset +
-        ", " + RegisterField.fullName(srcRegister) +
-        ", " + (op2IsRegister ? RegisterField.fullName(op2) : op2);
+        ", " + srcRegister +
+        ", " + (op2IsRegister ? Register.ofMask(op2).toString() : op2);
   }
 }

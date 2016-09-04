@@ -1,9 +1,11 @@
 package com.github.vlsi.pru;
 
+import static com.github.vlsi.pru.CommonRegisters.R1_b0;
+import static com.github.vlsi.pru.CommonRegisters.R1_b1;
+
 import com.github.vlsi.pru.plc110.ArithmeticInstruction;
 import com.github.vlsi.pru.plc110.Pru;
 import com.github.vlsi.pru.plc110.QuickBranchInstruction;
-import com.github.vlsi.pru.plc110.RegisterField;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
@@ -14,26 +16,25 @@ import java.util.stream.IntStream;
 
 public class GtByteEmulatorTest {
   private final Pru cpu = new Pru();
-  private final int outReg = 1;
 
   @BeforeClass
   public void setup() {
     cpu.setInstructions(
         new QuickBranchInstruction(
             QuickBranchInstruction.Operation.GT,
-            (short) 3, 1, RegisterField.b0,
+            (short) 3, R1_b0,
             (byte) 42
         ),
         new ArithmeticInstruction(
             ArithmeticInstruction.Operation.ADD,
-            outReg, RegisterField.b1,
-            outReg, RegisterField.b1,
+            R1_b1,
+            R1_b1,
             (byte) 1),
         new QuickBranchInstruction((short) 2),
         new ArithmeticInstruction(
             ArithmeticInstruction.Operation.ADD,
-            outReg, RegisterField.b1,
-            outReg, RegisterField.b1,
+            R1_b1,
+            R1_b1,
             (byte) 2)
     );
   }
@@ -59,10 +60,10 @@ public class GtByteEmulatorTest {
   @Test(dataProvider = "bytes")
   public void compareByte(int val) {
     cpu.setPc(0);
-    cpu.setReg(1, RegisterField.b1, 0);
-    cpu.setReg(1, RegisterField.b0, val);
+    cpu.setReg(R1_b1, 0);
+    cpu.setReg(R1_b0, val);
     run();
-    Assert.assertEquals(cpu.getReg(1, RegisterField.b1),
+    Assert.assertEquals(cpu.getReg(R1_b1),
         42 > (val & 0xff) ? 2 : 1, "val: " + Integer.toString(val));
   }
 }

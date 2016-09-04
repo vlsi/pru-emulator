@@ -36,14 +36,6 @@ public enum RegisterField {
     return ordinal();
   }
 
-  public int fullMask(int registerIndex) {
-    return registerIndex | (toMask() << 5);
-  }
-
-  public static String fullName(int register) {
-    return RegisterField.ofMask(register >> 5).toString(register & 31);
-  }
-
   public String toString(int registerIndex) {
     if (this == dw) {
       return "R" + registerIndex;

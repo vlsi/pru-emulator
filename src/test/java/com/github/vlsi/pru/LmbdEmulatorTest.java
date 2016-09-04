@@ -2,6 +2,7 @@ package com.github.vlsi.pru;
 
 import com.github.vlsi.pru.plc110.LeftMostBitDetectInstruction;
 import com.github.vlsi.pru.plc110.Pru;
+import com.github.vlsi.pru.plc110.Register;
 import com.github.vlsi.pru.plc110.RegisterField;
 import org.testng.Assert;
 import org.testng.annotations.DataProvider;
@@ -36,13 +37,13 @@ public class LmbdEmulatorTest {
 
   @Test(dataProvider = "data")
   public void run(RegisterField field, int value, int bit, int expected) {
-    int resultRegister = 1;
-    int srcRegister = 0;
+    Register resultRegister = new Register(1, RegisterField.b0);
+    Register srcRegister = new Register(0, field);
 
-    cpu.setReg(srcRegister, field, value);
-    cpu.setReg(resultRegister, RegisterField.b0, 255);
+    cpu.setReg(srcRegister, value);
+    cpu.setReg(resultRegister, 255);
     cpu.setInstructions(
-        new LeftMostBitDetectInstruction(resultRegister, RegisterField.b0, srcRegister, field, (byte) bit)
+        new LeftMostBitDetectInstruction(resultRegister, srcRegister, (byte) bit)
     );
     cpu.setPc(0);
     cpu.tick();

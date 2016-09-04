@@ -1,23 +1,23 @@
 package com.github.vlsi.pru.plc110;
 
 public class LdiInstruction extends Format2Instruction {
-  public final int dstRegister;
+  public final Register dstRegister;
   public final short value;
 
   public LdiInstruction(
-      int dstRegister, RegisterField dstField,
+      Register dstRegister,
       short value) {
     super(Operation.LDI,
         ((value & 0xffff) << 8)
-            | dstField.fullMask(dstRegister));
-    this.dstRegister = dstField.fullMask(dstRegister);
+            | dstRegister.mask());
+    this.dstRegister = dstRegister;
     this.value = value;
   }
 
   public LdiInstruction(int code) {
     this(
         // dstRegister
-        code & 31, RegisterField.ofMask(code >> 5),
+        Register.ofMask(code & 0xff),
         (short) ((code >> 8) & 0xffff)
     );
   }
@@ -25,7 +25,7 @@ public class LdiInstruction extends Format2Instruction {
   @Override
   public String toString() {
     return op + " " +
-        RegisterField.fullName(dstRegister) +
+        dstRegister +
         ", " + value;
   }
 }

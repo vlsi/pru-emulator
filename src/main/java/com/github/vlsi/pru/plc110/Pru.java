@@ -61,7 +61,7 @@ public class Pru {
     int op2 = getOp2(lmbd.op2, lmbd.op2IsRegister);
     int src = getReg(lmbd.srcRegister);
     if ((op2 & 1) == 0) {
-      int srcMask = RegisterField.ofMask(lmbd.srcRegister >> 5).getBitMask();
+      int srcMask = lmbd.srcRegister.field().getBitMask();
       src ^= srcMask;
     }
     int res = 31 - Integer.numberOfLeadingZeros(src);
@@ -70,7 +70,7 @@ public class Pru {
 
   private int getOp2(int op2, boolean op2IsRegister) {
     if (op2IsRegister) {
-      return getReg(op2);
+      return getReg(Register.ofMask(op2));
     }
     return op2;
   }
@@ -79,7 +79,7 @@ public class Pru {
     int src = getReg(ins.srcRegister);
     int op2 = getOp2(ins.op2, ins.op2IsRegister);
     int res = 0;
-    int resMask = ins.dstField.getBitMask();
+    int resMask = ins.dstRegister.field().getBitMask();
     switch (ins.operation) {
       case ADD: {
         res = (src + op2) & resMask;
@@ -149,7 +149,7 @@ public class Pru {
         // NOTE: Whenever R31 is selected as the source operand to a SET, the resulting
         // source bits will be NULL, and not reflect the current input event flags that
         // are normally obtained by reading R31
-        if ((ins.srcRegister & 31) == 31) {
+        if (ins.srcRegister.index() == 31) {
           src = 0;
         }
         res = src | (1 << (op2 & 0x1f));
@@ -207,52 +207,32 @@ public class Pru {
     return carry != 0;
   }
 
-  public Register getRegister(int index) {
-    if (index < 0 || index > TOTAL_REGISTERS) {
-      throw new IllegalArgumentException("Register index should be in range 0.."
-          + TOTAL_REGISTERS + ", actual value is " + index);
-    }
-    return new Register(registers, index);
-  }
-
-  public int getReg(int register) {
-    return getRegister(register & 31, register >> 5);
-  }
-
-  public void setReg(int register, int value) {
-    setRegister(register & 31, register >> 5, value);
-  }
-
-  public int getReg(int register, RegisterField field) {
-    return getRegister(register & 31, field.toMask());
-  }
-
-  public void setReg(int register, RegisterField field, int value) {
-    setRegister(register & 31, field.toMask(), value);
-  }
-
-  private int getRegister(int register, int mask) {
-    int offset = register * 4;
-    if (mask < 4) {
-      return registers.get(offset + mask) & 0xff;
-    }
-    if (mask < 7) {
-      return registers.getShort(offset + mask - 4) & 0xffff;
-    }
-    return registers.getInt(offset);
-  }
-
-  private void setRegister(int register, int mask, int value) {
-    int offset = register * 4;
-    if (mask < 4) {
-      registers.put(offset + mask, (byte) (value & 0xff));
+  public void setReg(Register reg, int value) {
+    int offset = reg.index() * 4;
+    RegisterField field = reg.field();
+    int bits = field.getBitWidth();
+    if (bits == 8) {
+      registers.put(offset + field.toMask(), (byte) (value & 0xff));
       return;
     }
-    if (mask < 7) {
-      registers.putShort(offset + mask - 4, (short) (value & 0xffff));
+    if (bits == 16) {
+      registers.putShort(offset + field.toMask() - 4, (short) (value & 0xffff));
       return;
     }
     registers.putInt(offset, value);
+  }
+
+  public int getReg(Register reg) {
+    int offset = reg.index() * 4;
+    RegisterField field = reg.field();
+    int bits = field.getBitWidth();
+    if (bits == 8) {
+      return registers.get(offset + field.toMask()) & 0xff;
+    }
+    if (bits == 16) {
+      return registers.getShort(offset + field.toMask() - 4) & 0xffff;
+    }
+    return registers.getInt(offset);
   }
 
   public String printState() {
@@ -270,7 +250,7 @@ public class Pru {
     }
 
     for (int i = 0; i < 31; i++) {
-      int reg = getReg(RegisterField.dw.fullMask(i));
+      int reg = getReg(new Register(i, RegisterField.dw));
       sb.append("R").append(i).append(": ");
       String hex = Integer.toUnsignedString(reg, 16);
       sb.append("0x");

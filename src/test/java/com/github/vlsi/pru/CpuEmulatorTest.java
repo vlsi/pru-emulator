@@ -1,5 +1,14 @@
 package com.github.vlsi.pru;
 
+import static com.github.vlsi.pru.CommonRegisters.R1;
+import static com.github.vlsi.pru.CommonRegisters.R1_b0;
+import static com.github.vlsi.pru.CommonRegisters.R1_b1;
+import static com.github.vlsi.pru.CommonRegisters.R1_b2;
+import static com.github.vlsi.pru.CommonRegisters.R1_b3;
+import static com.github.vlsi.pru.CommonRegisters.R1_w0;
+import static com.github.vlsi.pru.CommonRegisters.R1_w1;
+import static com.github.vlsi.pru.CommonRegisters.R1_w2;
+
 import com.github.vlsi.pru.plc110.ArithmeticInstruction;
 import com.github.vlsi.pru.plc110.Decoder;
 import com.github.vlsi.pru.plc110.LdiInstruction;
@@ -18,19 +27,19 @@ public class CpuEmulatorTest {
     ByteBuffer bb = ByteBuffer.allocate(8);
     ArithmeticInstruction subW0W0_1 = new ArithmeticInstruction(
         ArithmeticInstruction.Operation.SUB,
-        1, RegisterField.w0, 1, RegisterField.w0, (byte) 1);
+        R1_w0, R1_w0, (byte) 1);
     bb.putInt(subW0W0_1.code);
     bb.putInt(subW0W0_1.code);
     bb.flip();
     cpu.setInstructions(new Decoder().decode(bb));
 
-    cpu.setReg(1, RegisterField.w0, 42);
+    cpu.setReg(R1_w0, 42);
     cpu.tick();
 
-    Assert.assertEquals(cpu.getReg(1), 41, "42 - 1");
+    Assert.assertEquals(cpu.getReg(R1), 41, "42 - 1");
 
     cpu.tick();
-    Assert.assertEquals(cpu.getReg(1), 40, "42 - 1 - 1");
+    Assert.assertEquals(cpu.getReg(R1), 40, "42 - 1 - 1");
   }
 
   @Test
@@ -38,13 +47,13 @@ public class CpuEmulatorTest {
     Pru cpu = new Pru();
     ByteBuffer bb = ByteBuffer.allocate(4);
     int value = 12345;
-    bb.putInt(new LdiInstruction(1, RegisterField.w1, (short) value).code);
+    bb.putInt(new LdiInstruction(R1_w1, (short) value).code);
     bb.flip();
     cpu.setInstructions(new Decoder().decode(bb));
 
     cpu.tick();
 
-    Assert.assertEquals(cpu.getReg(1, RegisterField.w1), value);
+    Assert.assertEquals(cpu.getReg(R1_w1), value);
   }
 
   @Test
@@ -53,7 +62,8 @@ public class CpuEmulatorTest {
     ByteBuffer bb = ByteBuffer.allocate(4);
     int offset = -43;
     bb.putInt(new QuickBranchInstruction(
-        QuickBranchInstruction.Operation.GT, (short) offset, 1, RegisterField.w1,
+        QuickBranchInstruction.Operation.GT, (short) offset,
+        R1_w1,
         (byte) 42).code);
     bb.flip();
     cpu.setInstructions(new Decoder().decode(bb));
@@ -71,19 +81,19 @@ public class CpuEmulatorTest {
     // b0 = 189
     bb.putInt(
         new ArithmeticInstruction(ArithmeticInstruction.Operation.ADD,
-            1, RegisterField.b0, 1, RegisterField.b0, (byte) 189).code);
+            R1_b0, R1_b0, (byte) 189).code);
     // b1 = 190
     bb.putInt(
         new ArithmeticInstruction(ArithmeticInstruction.Operation.ADD,
-            1, RegisterField.b1, 1, RegisterField.b1, (byte) 190).code);
+            R1_b1, R1_b1, (byte) 190).code);
     // b2 = b1 + b0 -> should carry
     bb.putInt(
         new ArithmeticInstruction(ArithmeticInstruction.Operation.ADD,
-            1, RegisterField.b2, 1, RegisterField.b1, 1, RegisterField.b0).code);
+            R1_b2, R1_b1, R1_b0).code);
     // b3 = b3 + 0 + carry
     bb.putInt(
         new ArithmeticInstruction(ArithmeticInstruction.Operation.ADC,
-            1, RegisterField.b3, 1, RegisterField.b3, (byte) 0).code);
+            R1_b3, R1_b3, (byte) 0).code);
     bb.flip();
     cpu.setInstructions(new Decoder().decode(bb));
 
@@ -91,6 +101,6 @@ public class CpuEmulatorTest {
       cpu.tick();
     }
 
-    Assert.assertEquals(cpu.getReg(1, RegisterField.w2), 189 + 190, "189 + 190");
+    Assert.assertEquals(cpu.getReg(R1_w2), 189 + 190, "189 + 190");
   }
 }

@@ -23,27 +23,25 @@ public class ArithmeticInstruction extends Instruction {
   private final static Operation[] ops = Operation.values();
 
   public final Operation operation;
-  public final int dstRegister;
-  public final RegisterField dstField;
-  public final int srcRegister;
+  public final Register dstRegister;
+  public final Register srcRegister;
   public final int op2;
   public final boolean op2IsRegister;
 
   public ArithmeticInstruction(
       Operation op,
-      int dstRegister, RegisterField dstField,
-      int srcRegister, RegisterField srcField,
+      Register dstRegister,
+      Register srcRegister,
       boolean op2IsRegister,
       byte op2) {
     super((op.ordinal() << 25)
         | (op2IsRegister ? 0 : 1 << 24)
         | ((op2 & 0xff) << 16)
-        | (srcField.fullMask(srcRegister) << 8)
-        | dstField.fullMask(dstRegister));
+        | (srcRegister.mask() << 8)
+        | dstRegister.mask());
     this.operation = op;
-    this.dstRegister = dstField.fullMask(dstRegister);
-    this.dstField = dstField;
-    this.srcRegister = srcField.fullMask(srcRegister);
+    this.dstRegister = dstRegister;
+    this.srcRegister = srcRegister;
     this.op2IsRegister = op2IsRegister;
     this.op2 = op2 & 0xff;
   }
@@ -51,9 +49,9 @@ public class ArithmeticInstruction extends Instruction {
   public ArithmeticInstruction(int code) {
     this(ops[(code >> 25) & 0xf],
         // dstRegister
-        code & 31, RegisterField.ofMask(code >> 5),
+        Register.ofMask(code & 0xff),
         // srcRegister
-        (code >> 8) & 31, RegisterField.ofMask(code >> (8 + 5)),
+        Register.ofMask((code >> 8) & 0xff),
         // op2IsRegister
         (code & (1 << 24)) == 0,
         // op2
@@ -65,26 +63,26 @@ public class ArithmeticInstruction extends Instruction {
 
   public ArithmeticInstruction(
       Operation op,
-      int dstRegister, RegisterField dstField,
-      int srcRegister, RegisterField srcField,
+      Register dstRegister,
+      Register srcRegister,
       byte op2) {
-    this(op, dstRegister, dstField, srcRegister, srcField, false, op2);
+    this(op, dstRegister, srcRegister, false, op2);
   }
 
   public ArithmeticInstruction(
       Operation op,
-      int dstRegister, RegisterField dstField,
-      int srcRegister, RegisterField srcField,
-      int op2Register, RegisterField op2Field) {
-    this(op, dstRegister, dstField, srcRegister, srcField, true,
-        (byte) op2Field.fullMask(op2Register));
+      Register dstRegister,
+      Register srcRegister,
+      Register op2Register) {
+    this(op, dstRegister, srcRegister, true,
+        (byte) op2Register.mask());
   }
 
   @Override
   public String toString() {
     return operation + " " +
-        RegisterField.fullName(dstRegister) +
-        ", " + RegisterField.fullName(srcRegister) +
-        ", " + (op2IsRegister ? RegisterField.fullName(op2) : op2);
+        dstRegister +
+        ", " + srcRegister +
+        ", " + (op2IsRegister ? Register.ofMask(op2).toString() : op2);
   }
 }

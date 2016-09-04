@@ -1,41 +1,40 @@
 package com.github.vlsi.pru.plc110;
 
-import java.nio.ByteBuffer;
-
 public class Register {
-  private final ByteBuffer dst;
   private int index;
+  private RegisterField field;
 
-  public Register(ByteBuffer dst, int index) {
-    this.dst = dst;
+  public Register(int index, RegisterField field) {
     this.index = index;
+    this.field = field;
   }
 
-  public int get() {
-    return dst.getInt(index * 4);
+  public static Register ofMask(int mask) {
+    assert mask >=0 && mask <= 255 : "Register mask should be [0..255]. Given " + mask;
+    return new Register(mask & 31, RegisterField.ofMask(mask >>> 5));
   }
 
-  public void set(int value) {
-    dst.putInt(index * 4, value);
+  public int index() {
+    return index;
   }
 
-  public short getR16(int field) {
-    assert field >= 0 || field <= 2 : "r16 field should be either w0, w1, or w2. Trying to access field " + field;
-    return dst.getShort(index * 4 + field);
+  public RegisterField field() {
+    return field;
   }
 
-  public void setR16(int field, short value) {
-    assert field >= 0 || field <= 2 : "r16 field should be either w0, w1, or w2. Trying to access field " + field;
-    dst.putInt(index * 4 + field, value);
+  public int mask() {
+    return index | (field.toMask() << 5);
   }
 
-  public byte getR8(int field) {
-    assert field >= 0 || field <= 3 : "r8 field should be either b0, b1, b2, or b3. Trying to access field " + field;
-    return dst.get(index * 4 + field);
+  public Register withField(RegisterField field) {
+    if (this.field == field) {
+      return this;
+    }
+    return new Register(index(), field);
   }
 
-  public void setR8(int field, byte value) {
-    assert field >= 0 || field <= 3 : "r8 field should be either b0, b1, b2, or b3. Trying to access field " + field;
-    dst.put(index * 4 + field, value);
+  @Override
+  public String toString() {
+    return field.toString(index);
   }
 }
