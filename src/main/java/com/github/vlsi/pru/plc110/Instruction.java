@@ -1,7 +1,7 @@
 package com.github.vlsi.pru.plc110;
 
 public abstract class Instruction {
-  public final int code;
+  public int code;
 
   public Instruction(int code) {
     this.code = code;

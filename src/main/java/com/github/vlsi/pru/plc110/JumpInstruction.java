@@ -1,14 +1,16 @@
 package com.github.vlsi.pru.plc110;
 
-public class JumpInstruction extends Format2Instruction {
+public class JumpInstruction extends Format2Instruction implements Jump {
   public final Register dstRegister;
-  public final int op2;
+  public int op2;
   public final boolean op2IsRegister;
+  public final Label target;
 
   private JumpInstruction(
       Operation op,
       boolean op2IsRegister, int op2,
-      Register dstRegister
+      Register dstRegister,
+      Label target
   ) {
     super(op, (op2IsRegister ? 0 : 1 << 24)
         | (op2IsRegister ? ((op2 & 0xff) << 16) : ((op2 & 0xffff) << 8))
@@ -19,6 +21,7 @@ public class JumpInstruction extends Format2Instruction {
     this.dstRegister = dstRegister;
     this.op2 = op2;
     this.op2IsRegister = op2IsRegister;
+    this.target = target;
   }
 
   public JumpInstruction(int code) {
@@ -30,22 +33,37 @@ public class JumpInstruction extends Format2Instruction {
       this.op2 = (code >> 8) & 0xffff;
     }
     this.dstRegister = Register.ofMask(code & 0xff);
+    this.target = null;
   }
 
-  private JumpInstruction(
+  public JumpInstruction(
       Operation op,
       Register op2Register,
       Register dstRegister
   ) {
-    this(op, true, (byte) op2Register.mask(), dstRegister);
+    this(op, true, (byte) op2Register.mask(), dstRegister, null);
   }
 
-  private JumpInstruction(
+  public JumpInstruction(
       Operation op,
-      int op2,
+      Label target,
       Register dstRegister
   ) {
-    this(op, false, op2, dstRegister);
+    this(op, false, target.getOffset() == -1 ? 0 : target.getOffset(), dstRegister, target);
+  }
+
+  @Override
+  public Label getTarget() {
+    return target;
+  }
+
+  @Override
+  public void resolveTarget(int sourceOffset) {
+    if (target == null) {
+      return;
+    }
+    this.op2 = target.getOffset();
+    this.code = (this.code & ~(0xffff << 8)) | ((op2 & 0xffff) << 8);
   }
 
   @Override

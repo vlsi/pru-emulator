@@ -4,6 +4,7 @@ import static com.github.vlsi.pru.CommonRegisters.R1_b0;
 import static com.github.vlsi.pru.CommonRegisters.R1_b1;
 
 import com.github.vlsi.pru.plc110.ArithmeticInstruction;
+import com.github.vlsi.pru.plc110.Label;
 import com.github.vlsi.pru.plc110.Pru;
 import com.github.vlsi.pru.plc110.QuickBranchInstruction;
 import org.testng.Assert;
@@ -22,7 +23,7 @@ public class GtByteEmulatorTest {
     cpu.setInstructions(
         new QuickBranchInstruction(
             QuickBranchInstruction.Operation.GT,
-            (short) 3, R1_b0,
+            new Label("test", 3), R1_b0,
             (byte) 42
         ),
         new ArithmeticInstruction(
@@ -30,7 +31,7 @@ public class GtByteEmulatorTest {
             R1_b1,
             R1_b1,
             (byte) 1),
-        new QuickBranchInstruction((short) 2),
+        new QuickBranchInstruction(new Label("end", 2)),
         new ArithmeticInstruction(
             ArithmeticInstruction.Operation.ADD,
             R1_b1,

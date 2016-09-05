@@ -11,6 +11,7 @@ import static com.github.vlsi.pru.CommonRegisters.R1_w2;
 
 import com.github.vlsi.pru.plc110.ArithmeticInstruction;
 import com.github.vlsi.pru.plc110.Decoder;
+import com.github.vlsi.pru.plc110.Label;
 import com.github.vlsi.pru.plc110.LdiInstruction;
 import com.github.vlsi.pru.plc110.Pru;
 import com.github.vlsi.pru.plc110.QuickBranchInstruction;
@@ -62,7 +63,7 @@ public class CpuEmulatorTest {
     ByteBuffer bb = ByteBuffer.allocate(4);
     int offset = -43;
     bb.putInt(new QuickBranchInstruction(
-        QuickBranchInstruction.Operation.GT, (short) offset,
+        QuickBranchInstruction.Operation.GT, new Label("test", offset),
         R1_w1,
         (byte) 42).code);
     bb.flip();

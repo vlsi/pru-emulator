@@ -1,6 +1,6 @@
 package com.github.vlsi.pru.plc110;
 
-public class QuickBranchInstruction extends Instruction {
+public class QuickBranchInstruction extends Instruction implements Jump {
   private final static Operation[] VALUES_4 = Operation.values();
   private final static Operation[] VALUES_5 =
       {Operation.NEVER, Operation.BC, Operation.BS, Operation.A};
@@ -33,10 +33,11 @@ public class QuickBranchInstruction extends Instruction {
   }
 
   public final Operation operation;
-  public final short offset;
+  public short offset;
   public final boolean op2IsRegister;
   public final byte op2;
   public final Register srcRegister;
+  public final Label target;
 
   public QuickBranchInstruction(int code) {
     super(code);
@@ -56,45 +57,70 @@ public class QuickBranchInstruction extends Instruction {
     this.op2IsRegister = (code & (1 << 24)) == 0;
     this.op2 = (byte) ((code >> 16) & 0xff);
     this.srcRegister = Register.ofMask((code >> 8) & 0xff);
+    this.target = null;
   }
 
   private QuickBranchInstruction(
       Operation op,
-      short offset, Register srcRegister,
+      Label target, Register srcRegister,
       boolean op2IsRegister, byte op2) {
-    super(op.header()
-        | (((offset >> 8) & 3) << 25)
-        | (op2IsRegister ? 0 : 1 << 24)
-        | ((op2 & 0xff) << 16)
-        | (srcRegister.mask() << 8)
-        | (offset & 0xff));
+    super(updateOffset(op.header()
+            | (op2IsRegister ? 0 : 1 << 24)
+            | ((op2 & 0xff) << 16)
+            | (srcRegister.mask() << 8),
+        (short) (target.getOffset() == -1 ? 0 : target.getOffset())));
     assert offset < 1 << 10 && offset >= -1 << 10
         : "Branch offset should fit into 10 bits. Given " + offset;
     this.operation = op;
-    this.offset = offset;
+    this.offset = (short) (target.getOffset() == -1 ? 0 : target.getOffset());
     this.op2IsRegister = op2IsRegister;
     this.op2 = op2;
     this.srcRegister = srcRegister;
+    this.target = target;
   }
 
   public QuickBranchInstruction(
-      Operation op, short offset,
+      Operation op, Label target,
       Register srcRegister,
       byte op2) {
-    this(op, offset, srcRegister, false, op2);
+    this(op, target, srcRegister, false, op2);
   }
 
   public QuickBranchInstruction(
-      Operation op, short offset,
+      Operation op, Label target,
       Register srcRegister,
       Register op2Register) {
-    this(op, offset, srcRegister, true,
+    this(op, target, srcRegister, true,
         (byte) op2Register.mask());
   }
 
   public QuickBranchInstruction(
-      short offset) {
-    this(Operation.A, offset, new Register(1, RegisterField.dw), false, (byte) 0);
+      Label target) {
+    this(Operation.A, target, new Register(1, RegisterField.dw), false, (byte) 0);
+  }
+
+  private static int updateOffset(int code, short offset) {
+    return (code & ~(0b11 << 25 | 0xff))
+        | (((offset >> 8) & 0b11) << 25)
+        | (offset & 0xff);
+  }
+
+  public void setOffset(short offset) {
+    this.code = updateOffset(code, offset);
+    this.offset = offset;
+  }
+
+  @Override
+  public Label getTarget() {
+    return target;
+  }
+
+  @Override
+  public void resolveTarget(int sourceOffset) {
+    if (target == null) {
+      return;
+    }
+    setOffset((short) (target.getOffset() - sourceOffset));
   }
 
   public boolean isBitTest() {
