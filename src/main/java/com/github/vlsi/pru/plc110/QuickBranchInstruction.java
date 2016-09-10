@@ -82,8 +82,8 @@ public class QuickBranchInstruction extends Instruction implements Jump {
   public QuickBranchInstruction(
       Operation op, Label target,
       Register srcRegister,
-      byte op2) {
-    this(op, target, srcRegister, false, op2);
+      int op2) {
+    this(op, target, srcRegister, false, (byte) op2);
   }
 
   public QuickBranchInstruction(

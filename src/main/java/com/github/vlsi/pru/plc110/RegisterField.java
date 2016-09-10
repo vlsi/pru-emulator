@@ -36,6 +36,17 @@ public enum RegisterField {
     return ordinal();
   }
 
+  public int byteOffset() {
+    int ord = ordinal();
+    if (ord < 4) {
+      return ord;
+    }
+    if (ord < 7) {
+      return ord - 4;
+    }
+    return 0;
+  }
+
   public String toString(int registerIndex) {
     if (this == dw) {
       return "R" + registerIndex;

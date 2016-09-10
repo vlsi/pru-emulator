@@ -7,6 +7,12 @@ import java.util.Arrays;
 import java.util.List;
 
 public class Pru {
+  private final static int PRU0_CONTROL_REGISTERS = 0x7000;
+
+  private final ByteBuffer ram =
+      ByteBuffer.allocate(0x7bff)
+          .order(ByteOrder.LITTLE_ENDIAN);
+
   private final static int TOTAL_REGISTERS = 32;
 
   // Byte order is b0, b1, b2, b3, b0, ...
@@ -14,17 +20,25 @@ public class Pru {
       ByteBuffer.allocate(TOTAL_REGISTERS * 4)
           .order(ByteOrder.LITTLE_ENDIAN);
 
-  private final ByteBuffer ram =
-      ByteBuffer.allocate(1024)
-          .order(ByteOrder.LITTLE_ENDIAN);
+  private final ByteBuffer registersView = registers.duplicate().order(ByteOrder.LITTLE_ENDIAN);
+  private final ByteBuffer ramView = ram.duplicate().order(ByteOrder.LITTLE_ENDIAN);
+
+  private final ByteBuffer cycleCountReg
+      = ((ByteBuffer) ram.duplicate()
+      .position(PRU0_CONTROL_REGISTERS + 0xC)
+      .limit(PRU0_CONTROL_REGISTERS + 0xC + 4))
+      .slice().order(ByteOrder.LITTLE_ENDIAN);
 
   private List<Instruction> instructionStream = new ArrayList<>();
 
   private int carry;
   private int pc;
 
+  private int cycleCount;
+
   public void tick() {
     Instruction ins = instructionStream.get(pc);
+    cycleCount++;
     if (ins instanceof ArithmeticInstruction) {
       execArithmetic((ArithmeticInstruction) ins);
       pc++;
@@ -53,7 +67,57 @@ public class Pru {
       pc = execQuickBranch((QuickBranchInstruction) ins);
       return;
     }
+    if (ins instanceof MemoryTransferInstruction) {
+      execMemoryTransfer((MemoryTransferInstruction) ins);
+      pc++;
+      return;
+    }
     throw new IllegalStateException("Unsupported instruction " + ins);
+  }
+
+  private void execMemoryTransfer(MemoryTransferInstruction ins) {
+    cycleCountReg.putInt(0, cycleCount - 1);
+    int address;
+
+    if (ins.addressIsRegister()) {
+      address = getReg(ins.getAddress());
+    } else {
+      byte addrConst = ins.getAddressEntry();
+      switch (addrConst) {
+        default:
+          throw new IllegalArgumentException(
+              "Not implemented address entry " + addrConst + " for " + ins);
+      }
+    }
+
+    int offset;
+    if (ins.offsetIsRegister()) {
+      offset = getReg(ins.getOffsetRegister());
+    } else {
+      offset = ins.getOffsetImm();
+    }
+
+    int length;
+    if (ins.lengthIsRegister()) {
+      length = getReg(new Register(0, ins.getLengthField()));
+    } else {
+      length = ins.getLengthByte();
+    }
+
+    registersView.position(getRegOffset(ins.srcDst));
+    registersView.limit(registersView.position() + length);
+
+    ramView.position(address + offset);
+    ramView.limit(ramView.position() + length);
+
+    if (ins.op == MemoryTransferInstruction.Operation.LOAD) {
+      registersView.put(ramView);
+    } else {
+      ramView.put(registersView);
+    }
+
+    cycleCount = cycleCountReg.getInt(0);
+    cycleCount += 1 + (length + 1) / 2;
   }
 
   private void execLeftMostBitDetect(LeftMostBitDetectInstruction ins) {
@@ -203,6 +267,10 @@ public class Pru {
     return pc;
   }
 
+  public int getCycleCount() {
+    return cycleCount;
+  }
+
   public boolean getCarry() {
     return carry != 0;
   }
@@ -233,6 +301,19 @@ public class Pru {
       return registers.getShort(offset + field.toMask() - 4) & 0xffff;
     }
     return registers.getInt(offset);
+  }
+
+  private int getRegOffset(Register reg) {
+    int offset = reg.index() * 4;
+    RegisterField field = reg.field();
+    int bits = field.getBitWidth();
+    if (bits == 8) {
+      return offset + field.toMask();
+    }
+    if (bits == 16) {
+      return offset + field.toMask() - 4;
+    }
+    return offset;
   }
 
   public String printState() {

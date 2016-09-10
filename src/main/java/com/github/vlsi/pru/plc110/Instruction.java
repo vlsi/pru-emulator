@@ -22,6 +22,10 @@ public abstract class Instruction {
       case 0b110:
         // Format 5a or 5b
         return new QuickBranchInstruction(code);
+      case 0b111:
+      case 0b100:
+        // Format 6a, 6b, 6c, or 6d
+        return new MemoryTransferInstruction(code);
     }
     throw new IllegalArgumentException("Unknown instruction " + Integer.toHexString(code)
         + ", format " + Integer.toBinaryString(format));

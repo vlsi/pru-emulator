@@ -65,8 +65,8 @@ public class ArithmeticInstruction extends Instruction {
       Operation op,
       Register dstRegister,
       Register srcRegister,
-      byte op2) {
-    this(op, dstRegister, srcRegister, false, op2);
+      int op2) {
+    this(op, dstRegister, srcRegister, false, (byte) op2);
   }
 
   public ArithmeticInstruction(

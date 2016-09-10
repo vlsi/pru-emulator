@@ -23,7 +23,6 @@ TODO
 
 - Interrupts
 - GPIO (explicit API to set/get IO values)
-- Control registers, DDR
 - Dual-PRU emulation (cross-PRU memory mapping)
 
 
@@ -32,8 +31,8 @@ Changelog
 ---------
 
 v1.0.0-SNAPSHOT
-- Supported instructions: arithmetic, LMBD, LDI, JAL, JMP, QB
-- Not yet implemented: LBBO/SBBO, LBCO/SBCO, SCAN, HLT, SLP
+- Supported instructions: arithmetic, LMBD, LDI, JAL, JMP, QB, LBBO/SBBO, LBCO/SBCO
+- Not yet implemented: SCAN, HLT, SLP
 
 Author
 ------

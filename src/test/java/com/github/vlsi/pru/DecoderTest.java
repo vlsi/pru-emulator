@@ -66,4 +66,51 @@ public class DecoderTest {
         0x2701e1e1);
   }
 
+  @Test
+  public void decodeLbbo() {
+    assertDecode("LBBO R0.b2, R0.b0, 12, 1",
+        0xf10c0040);
+  }
+
+  @Test
+  public void decodeLbbo2() {
+    assertDecode("LBBO R1.b2, R0.b0, 12, 2",
+        0xf10c00c1);
+  }
+
+  @Test
+  public void decodeSbbo() {
+    assertDecode("SBBO R0.b2, R0.b0, 12, 1",
+        0xe10c0040);
+  }
+
+  @Test
+  public void decodeSbbo2() {
+    assertDecode("SBBO R1.b2, R0.b0, 12, 2",
+        0xe10c00c1);
+  }
+
+  @Test
+  public void decodeLbco() {
+    assertDecode("LBCO R0.b0, C3, 0, 1",
+        0x91000300);
+  }
+
+  @Test
+  public void decodeLbco2() {
+    assertDecode("LBCO R0.b0, C3, 112, 4",
+        0x91702380);
+  }
+
+  @Test
+  public void decodeSbco() {
+    assertDecode("SBCO R0.b0, C3, 116, 4",
+        0x81742380);
+  }
+
+  @Test
+  public void decodeSbco2() {
+    assertDecode("SBCO R0.b0, C3, 0, 1",
+        0x81000300);
+  }
 }
