@@ -19,6 +19,20 @@ public class EncoderTest {
         .encode();
     String actual = ins.toString();
     Assert.assertEquals(actual, "LBBO R8.b3, R1.b0, R6.b2, 42");
-    Assert.assertEquals(actual, new MemoryTransferInstruction(ins.code).toString());
+    Assert.assertEquals(new MemoryTransferInstruction(ins.code).toString(), actual);
+  }
+
+  @Test
+  public void lbco1() {
+    MemoryTransferInstruction ins =
+        new MemoryTransferInstruction(MemoryTransferInstruction.Operation.LOAD,
+            new Register(2, RegisterField.w0))
+            .setAddress(3)
+            .setOffset(0)
+            .setLength(2)
+            .encode();
+    String actual = ins.toString();
+    Assert.assertEquals(actual, "LBCO R2.w0, C3, 0, 2");
+    Assert.assertEquals(new MemoryTransferInstruction(ins.code).toString(), "LBCO R2.b0, C3, 0, 2");
   }
 }

@@ -35,7 +35,7 @@ public class QuickBranchInstruction extends Instruction implements Jump {
   public final Operation operation;
   public short offset;
   public final boolean op2IsRegister;
-  public final byte op2;
+  public final int op2;
   public final Register srcRegister;
   public final Label target;
 
@@ -55,7 +55,7 @@ public class QuickBranchInstruction extends Instruction implements Jump {
     }
     this.offset = offset;
     this.op2IsRegister = (code & (1 << 24)) == 0;
-    this.op2 = (byte) ((code >> 16) & 0xff);
+    this.op2 = (code >> 16) & 0xff;
     this.srcRegister = Register.ofMask((code >> 8) & 0xff);
     this.target = null;
   }
@@ -74,7 +74,7 @@ public class QuickBranchInstruction extends Instruction implements Jump {
     this.operation = op;
     this.offset = (short) (target.getOffset() == -1 ? 0 : target.getOffset());
     this.op2IsRegister = op2IsRegister;
-    this.op2 = op2;
+    this.op2 = op2 & 0xff;
     this.srcRegister = srcRegister;
     this.target = target;
   }

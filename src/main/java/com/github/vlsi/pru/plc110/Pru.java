@@ -35,6 +35,7 @@ public class Pru {
   private int pc;
 
   private int cycleCount;
+  private int memoryTransferCyclesLeft;
 
   public void tick() {
     Instruction ins = instructionStream.get(pc);
@@ -68,15 +69,33 @@ public class Pru {
       return;
     }
     if (ins instanceof MemoryTransferInstruction) {
-      execMemoryTransfer((MemoryTransferInstruction) ins);
-      pc++;
+      if (memoryTransferCyclesLeft == 0) {
+        prepareMemoryTransfer((MemoryTransferInstruction) ins);
+        return;
+      }
+      memoryTransferCyclesLeft--;
+      if (memoryTransferCyclesLeft == 0) {
+        execMemoryTransfer((MemoryTransferInstruction) ins);
+        pc++;
+      }
       return;
     }
     throw new IllegalStateException("Unsupported instruction " + ins);
   }
 
+  private void prepareMemoryTransfer(MemoryTransferInstruction ins) {
+    int length;
+    if (ins.lengthIsRegister()) {
+      length = getReg(new Register(0, ins.getLengthField()));
+    } else {
+      length = ins.getLengthByte();
+    }
+
+    memoryTransferCyclesLeft = (length + 1) / 2;
+  }
+
   private void execMemoryTransfer(MemoryTransferInstruction ins) {
-    cycleCountReg.putInt(0, cycleCount - 1);
+    cycleCountReg.putInt(0, cycleCount);
     int address;
 
     if (ins.addressIsRegister()) {
@@ -84,6 +103,9 @@ public class Pru {
     } else {
       byte addrConst = ins.getAddressEntry();
       switch (addrConst) {
+        case 3: // PRU0/1 Local Data
+          address = 0x00000000;
+          break;
         default:
           throw new IllegalArgumentException(
               "Not implemented address entry " + addrConst + " for " + ins);
@@ -104,20 +126,26 @@ public class Pru {
       length = ins.getLengthByte();
     }
 
-    registersView.position(getRegOffset(ins.srcDst));
-    registersView.limit(registersView.position() + length);
+    try {
+      int regOffs = getRegOffset(ins.srcDst);
+      registersView.limit(regOffs + length);
+      registersView.position(regOffs);
 
-    ramView.position(address + offset);
-    ramView.limit(ramView.position() + length);
+      int ramOffs = address + offset;
+      ramView.limit(ramOffs + length);
+      ramView.position(ramOffs);
 
-    if (ins.op == MemoryTransferInstruction.Operation.LOAD) {
-      registersView.put(ramView);
-    } else {
-      ramView.put(registersView);
+      if (ins.op == MemoryTransferInstruction.Operation.LOAD) {
+        registersView.put(ramView);
+      } else {
+        ramView.put(registersView);
+      }
+    } catch (IllegalArgumentException e) {
+      throw new IllegalStateException(
+          "Invalid memory access at instruction " + ins + ", cpu state: " + printState(), e);
     }
 
     cycleCount = cycleCountReg.getInt(0);
-    cycleCount += 1 + (length + 1) / 2;
   }
 
   private void execLeftMostBitDetect(LeftMostBitDetectInstruction ins) {
@@ -271,6 +299,10 @@ public class Pru {
     return cycleCount;
   }
 
+  public ByteBuffer ram() {
+    return ram.duplicate().order(ByteOrder.LITTLE_ENDIAN);
+  }
+
   public boolean getCarry() {
     return carry != 0;
   }
@@ -317,12 +349,12 @@ public class Pru {
   }
 
   public String printState() {
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     sb.append("pc: ").append(pc).append('\n');
     sb.append("carry: ").append(carry).append('\n');
 
     sb.append("Instructions around pc\n");
-    for (int i = Math.max(0, pc - 5); i < Math.min(instructionStream.size(), pc + 5); i++) {
+    for (int i = Math.max(0, pc - 10); i < Math.min(instructionStream.size(), pc + 10); i++) {
       sb.append(i).append(": ").append(instructionStream.get(i));
       if (i == pc) {
         sb.append(" // <-- PC");
@@ -332,6 +364,9 @@ public class Pru {
 
     for (int i = 0; i < 31; i++) {
       int reg = getReg(new Register(i, RegisterField.dw));
+      if (i > 5 && reg == 0) {
+        continue;
+      }
       sb.append("R").append(i).append(": ");
       String hex = Integer.toUnsignedString(reg, 16);
       sb.append("0x");
@@ -339,15 +374,32 @@ public class Pru {
         sb.append('0');
       }
       sb.append(hex);
-      sb.append(" ").append(Integer.toString(reg));
-      sb.append(", s: ").append(Short.toString((short) (reg >> 16)));
-      sb.append(" ").append(Short.toString((short) (reg & 0xffff)));
-      sb.append(", b: ").append(Byte.toString((byte) (reg >> 24)));
-      sb.append(" ").append(Byte.toString((byte) (reg >> 16)));
-      sb.append(" ").append(Byte.toString((byte) (reg >> 8)));
-      sb.append(" ").append(Byte.toString((byte) (reg & 0xff)));
+      sb.append(" ");
+      appendLpad(sb, reg, 10);
+      sb.append(", w2: ");
+      appendLpad(sb, (reg >> 16) & 0xffff, 5);
+      sb.append(", w1: ");
+      appendLpad(sb, (reg >> 8) & 0xffff, 5);
+      sb.append(", w0: ");
+      appendLpad(sb, reg & 0xffff, 5);
+      sb.append(", b3: ");
+      appendLpad(sb, (reg >>> 24) & 0xff, 3);
+      sb.append(", b2: ");
+      appendLpad(sb, (reg >>> 16) & 0xff, 3);
+      sb.append(", b1: ");
+      appendLpad(sb, (reg >>> 8) & 0xff, 3);
+      sb.append(", b0: ");
+      appendLpad(sb, reg & 0xff, 3);
       sb.append('\n');
     }
     return sb.toString();
+  }
+
+  private static void appendLpad(StringBuilder sb, int num, int width) {
+    String str = Integer.toString(num);
+    for (int i = str.length(); i < width; i++) {
+      sb.append(' ');
+    }
+    sb.append(str);
   }
 }
