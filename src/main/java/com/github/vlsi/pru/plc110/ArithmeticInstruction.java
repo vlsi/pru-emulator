@@ -83,6 +83,7 @@ public class ArithmeticInstruction extends Instruction {
     return operation + " " +
         dstRegister +
         ", " + srcRegister +
-        ", " + (op2IsRegister ? Register.ofMask(op2).toString() : op2);
+        ", " + (op2IsRegister ? Register.ofMask(op2).toString() : op2) +
+        commentToString();
   }
 }

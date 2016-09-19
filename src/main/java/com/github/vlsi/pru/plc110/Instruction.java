@@ -1,7 +1,10 @@
 package com.github.vlsi.pru.plc110;
 
+import java.util.List;
+
 public abstract class Instruction {
   public int code;
+  private String comment;
 
   public Instruction(int code) {
     this.code = code;
@@ -29,5 +32,26 @@ public abstract class Instruction {
     }
     throw new IllegalArgumentException("Unknown instruction " + Integer.toHexString(code)
         + ", format " + Integer.toBinaryString(format));
+  }
+
+  public List<Register> getRegisterOperands() {
+    if (comment == null) {
+      return null;
+    }
+
+    return null;
+  }
+
+  public String getComment() {
+    return comment;
+  }
+
+  public Instruction setComment(String comment) {
+    this.comment = comment;
+    return this;
+  }
+
+  public String commentToString() {
+    return comment != null ? " ; " + comment : "";
   }
 }

@@ -144,6 +144,7 @@ public class MemoryTransferInstruction extends Instruction {
         srcDst +
         ", " + (addrIsRegister ? Register.ofMask(addr).toString() : ("C" + addr)) +
         ", " + (offsetIsRegister ? Register.ofMask(offset).toString() : offset) +
-        ", " + (lengthIsRegister() ? getLengthField() : getLengthByte());
+        ", " + (lengthIsRegister() ? getLengthField() : getLengthByte()) +
+        commentToString();
   }
 }

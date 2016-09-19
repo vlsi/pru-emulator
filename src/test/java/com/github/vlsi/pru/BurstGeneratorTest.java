@@ -53,15 +53,15 @@ public class BurstGeneratorTest {
 
   @Test
   public void test() {
-    int cycleLength = 35;
-    int numPulses = 1;
+    int cycleLength = 33;
+    int numPulses = 2;
     final int edgeTolerance = 330;
 
     CodeEmitter ce = new CodeEmitter();
     generateCode(ce, cycleLength);
 
     Pru cpu = new Pru();
-    cpu.setInstructions(ce.visitEnd());
+    cpu.setCode(ce.visitEnd());
 
     cpu.ram().putShort(2, (short) cycleLength);
     cpu.ram().putShort(0, (short) numPulses);
@@ -111,7 +111,8 @@ public class BurstGeneratorTest {
             }
             break;
           }
-          System.out.print((i - lastStart) + "_/‾");
+          System.out.print(
+              "cycle: " + cycleLength + ", quantity: " + numPulses + ". _" + (i - lastStart) + "_/‾");
           edgeStarted = i;
           state = BurstState.GENERATING;
           lastOut = true;
@@ -210,14 +211,14 @@ public class BurstGeneratorTest {
   private void generateCode(CodeEmitter ce, int cycleLength) {
     Label startWhileBody0 = new Label("startWhileBody0");
     Label if3 = new Label("if3");
+    Label if5 = new Label("if5");
+    Label elsIf6 = new Label("elsIf6");
     Label endIf4 = new Label("endIf4");
-    Label startWhileBody5 = new Label("startWhileBody5");
-    Label endWhile6 = new Label("endWhile6");
     Label endIf2 = new Label("endIf2");
     Label if8 = new Label("if8");
-    Label if10 = new Label("if10");
-    Label elsIf11 = new Label("elsIf11");
     Label endIf9 = new Label("endIf9");
+    Label startWhileBody10 = new Label("startWhileBody10");
+    Label endWhile11 = new Label("endWhile11");
     Label endIf7 = new Label("endIf7");
     Label if13 = new Label("if13");
     Label endIf12 = new Label("endIf12");
@@ -225,58 +226,10 @@ public class BurstGeneratorTest {
     Label endIf14 = new Label("endIf14");
     Label endWhile1 = new Label("endWhile1");
     ce.visitLabel(startWhileBody0);
-    ce.visitInstruction(new MemoryTransferInstruction(MemoryTransferInstruction.Operation.LOAD,
-        new Register(2, RegisterField.w0)).setAddress(3).setOffset(2).setLength(2).encode());
-    // Параметр pruCycleLength это "количество тактов"-2
-    // Т.е. 200 это цикл в 1 мкс
-    // Call WAIT_TICK
-    // 0x00007000..0x00007FFF -- PRU0 Control Registers, 0xC -- cycle count register
-    ce.visitInstruction(new LdiInstruction(new Register(3, RegisterField.dw), (short) 28684));
-    ce.visitInstruction(new MemoryTransferInstruction(MemoryTransferInstruction.Operation.LOAD,
-        new Register(2, RegisterField.w2)).setAddress(new Register(3, RegisterField.dw)).setOffset(
-        0).setLength(2).encode());
-    ce.visitInstruction(new ArithmeticInstruction(ArithmeticInstruction.Operation.ADD,
-        new Register(2, RegisterField.w2), new Register(2, RegisterField.w2), 8));
-    ce.visitInstruction(new QuickBranchInstruction(QuickBranchInstruction.Operation.LT, if3,
-        new Register(2, RegisterField.w0), new Register(2, RegisterField.w2)));
-    ce.visitInstruction(new LdiInstruction(new Register(4, RegisterField.w0), (short) 0));
-
-    ce.visitInstruction(new QuickBranchInstruction(endIf2));
-    ce.visitLabel(if3);
-    ce.visitInstruction(new ArithmeticInstruction(ArithmeticInstruction.Operation.SUB,
-        new Register(4, RegisterField.w0), new Register(2, RegisterField.w0),
-        new Register(2, RegisterField.w2)));
-    ce.visitInstruction(new ArithmeticInstruction(ArithmeticInstruction.Operation.XOR,
-        new Register(4, RegisterField.w0), new Register(4, RegisterField.w0), 0));
-    ce.visitInstruction(new QuickBranchInstruction(QuickBranchInstruction.Operation.BC, endIf4,
-        new Register(4, RegisterField.w0), 0));
-    ce.visitInstruction(new ArithmeticInstruction(ArithmeticInstruction.Operation.XOR,
-        new Register(4, RegisterField.w0), new Register(4, RegisterField.w0), 1));
-    ce.visitLabel(endIf4);
-
-    ce.visitInstruction(new QuickBranchInstruction(QuickBranchInstruction.Operation.EQ, endWhile6,
-        new Register(4, RegisterField.w0), 0));
-    ce.visitLabel(startWhileBody5);
-    ce.visitInstruction(new ArithmeticInstruction(ArithmeticInstruction.Operation.SUB,
-        new Register(4, RegisterField.w0), new Register(4, RegisterField.w0), 2));
-
-    ce.visitInstruction(
-        new QuickBranchInstruction(QuickBranchInstruction.Operation.NE, startWhileBody5,
-            new Register(4, RegisterField.w0), 0));
-    ce.visitLabel(endWhile6);
-
-
-    ce.visitLabel(endIf2);
-
-    ce.visitInstruction(new MemoryTransferInstruction(MemoryTransferInstruction.Operation.STORE,
-        new Register(4, RegisterField.w0)).setAddress(new Register(3, RegisterField.dw)).setOffset(
-        0).setLength(2).encode());
-    //
-    // End WAIT_TICK
-    //
     // собственно полезная работа
     ce.visitInstruction(new MemoryTransferInstruction(MemoryTransferInstruction.Operation.LOAD,
         new Register(2, RegisterField.w0)).setAddress(3).setOffset(0).setLength(2).encode());
+    //
     // Call PRU_IN1
     ce.visitInstruction(new ArithmeticInstruction(ArithmeticInstruction.Operation.LSR,
         new Register(1, RegisterField.b3), new Register(31, RegisterField.dw), 21));
@@ -286,17 +239,17 @@ public class BurstGeneratorTest {
     //
     // End PRU_IN1
     // Call PRU_GENER_BURST
-    ce.visitInstruction(new QuickBranchInstruction(QuickBranchInstruction.Operation.NE, if8,
+    ce.visitInstruction(new QuickBranchInstruction(QuickBranchInstruction.Operation.NE, if3,
         new Register(1, RegisterField.b3), 0));
     // Выключаемся
     ce.visitInstruction(new LdiInstruction(new Register(1, RegisterField.w0), (short) 0));
     ce.visitInstruction(new LdiInstruction(new Register(1, RegisterField.b2), (short) 0));
 
-    ce.visitInstruction(new QuickBranchInstruction(endIf7));
-    ce.visitLabel(if8);
-    ce.visitInstruction(new QuickBranchInstruction(QuickBranchInstruction.Operation.LT, if10,
+    ce.visitInstruction(new QuickBranchInstruction(endIf2));
+    ce.visitLabel(if3);
+    ce.visitInstruction(new QuickBranchInstruction(QuickBranchInstruction.Operation.LT, if5,
         new Register(1, RegisterField.w0), 0));
-    ce.visitInstruction(new QuickBranchInstruction(QuickBranchInstruction.Operation.NE, elsIf11,
+    ce.visitInstruction(new QuickBranchInstruction(QuickBranchInstruction.Operation.NE, elsIf6,
         new Register(1, RegisterField.b2), 0));
     // Поступила команда на включение
     ce.visitInstruction(new ArithmeticInstruction(ArithmeticInstruction.Operation.LSL,
@@ -304,17 +257,17 @@ public class BurstGeneratorTest {
     ce.visitInstruction(new ArithmeticInstruction(ArithmeticInstruction.Operation.SUB,
         new Register(1, RegisterField.w0), new Register(1, RegisterField.w0), 1));
 
-    ce.visitInstruction(new QuickBranchInstruction(endIf9));
-    ce.visitLabel(if10);
+    ce.visitInstruction(new QuickBranchInstruction(endIf4));
+    ce.visitLabel(if5);
     // Идёт генерация
     ce.visitInstruction(new ArithmeticInstruction(ArithmeticInstruction.Operation.SUB,
         new Register(1, RegisterField.w0), new Register(1, RegisterField.w0), 1));
 
-    ce.visitInstruction(new QuickBranchInstruction(endIf9));
-    ce.visitLabel(elsIf11);
+    ce.visitInstruction(new QuickBranchInstruction(endIf4));
+    ce.visitLabel(elsIf6);
     // Всё сгенерировали, ждём пока передёрнут enable для следующего включения
 
-    ce.visitLabel(endIf9);
+    ce.visitLabel(endIf4);
 
     ce.visitInstruction(new ArithmeticInstruction(ArithmeticInstruction.Operation.MIN,
         new Register(1, RegisterField.b2), new Register(1, RegisterField.w0), 1));
@@ -322,13 +275,64 @@ public class BurstGeneratorTest {
         new Register(1, RegisterField.b2), new Register(1, RegisterField.b2), 1));
 
 
-    ce.visitLabel(endIf7);
+    ce.visitLabel(endIf2);
 
     // Если всё сделали, то out выключится. Если пачка ещё генерируется, то младший бит и есть меандр
     ce.visitInstruction(new ArithmeticInstruction(ArithmeticInstruction.Operation.AND,
         new Register(1, RegisterField.b3), new Register(1, RegisterField.w0), 1));
     //
     // End PRU_GENER_BURST
+    //
+    ce.visitInstruction(new MemoryTransferInstruction(MemoryTransferInstruction.Operation.LOAD,
+        new Register(2, RegisterField.w0)).setAddress(3).setOffset(2).setLength(2).encode());
+    // Параметр pruCycleLength это "количество тактов"
+    // Т.е. 200 это цикл в 1 мкс
+    //
+    // Call WAIT_TICK
+    // 0x00007000..0x00007FFF -- PRU0 Control Registers, 0xC -- cycle count register
+    ce.visitInstruction(new LdiInstruction(new Register(3, RegisterField.dw), (short) 28684));
+    ce.visitInstruction(new MemoryTransferInstruction(MemoryTransferInstruction.Operation.LOAD,
+        new Register(2, RegisterField.w2)).setAddress(new Register(3, RegisterField.dw)).setOffset(
+        0).setLength(2).encode());
+    ce.visitInstruction(new ArithmeticInstruction(ArithmeticInstruction.Operation.ADD,
+        new Register(2, RegisterField.w2), new Register(2, RegisterField.w2), 8));
+    ce.visitInstruction(new QuickBranchInstruction(QuickBranchInstruction.Operation.LT, if8,
+        new Register(2, RegisterField.w0), new Register(2, RegisterField.w2)));
+    ce.visitInstruction(new LdiInstruction(new Register(4, RegisterField.w0), (short) 0));
+
+    ce.visitInstruction(new QuickBranchInstruction(endIf7));
+    ce.visitLabel(if8);
+    ce.visitInstruction(new ArithmeticInstruction(ArithmeticInstruction.Operation.SUB,
+        new Register(4, RegisterField.w0), new Register(2, RegisterField.w0),
+        new Register(2, RegisterField.w2)));
+    ce.visitInstruction(new ArithmeticInstruction(ArithmeticInstruction.Operation.XOR,
+        new Register(4, RegisterField.w0), new Register(4, RegisterField.w0), 0));
+    ce.visitInstruction(new QuickBranchInstruction(QuickBranchInstruction.Operation.BC, endIf9,
+        new Register(4, RegisterField.w0), 0));
+    ce.visitInstruction(new ArithmeticInstruction(ArithmeticInstruction.Operation.XOR,
+        new Register(4, RegisterField.w0), new Register(4, RegisterField.w0), 1));
+    ce.visitLabel(endIf9);
+
+    ce.visitInstruction(new QuickBranchInstruction(QuickBranchInstruction.Operation.EQ, endWhile11,
+        new Register(4, RegisterField.w0), 0));
+    ce.visitLabel(startWhileBody10);
+    ce.visitInstruction(new ArithmeticInstruction(ArithmeticInstruction.Operation.SUB,
+        new Register(4, RegisterField.w0), new Register(4, RegisterField.w0), 2));
+
+    ce.visitInstruction(
+        new QuickBranchInstruction(QuickBranchInstruction.Operation.NE, startWhileBody10,
+            new Register(4, RegisterField.w0), 0));
+    ce.visitLabel(endWhile11);
+
+
+    ce.visitLabel(endIf7);
+
+    ce.visitInstruction(new MemoryTransferInstruction(MemoryTransferInstruction.Operation.STORE,
+        new Register(4, RegisterField.w0)).setAddress(new Register(3, RegisterField.dw)).setOffset(
+        0).setLength(2).encode());
+    //
+    // End WAIT_TICK
+    //
     // Call PRU_OUT1
     // Ага, ассемблерные вставки
     ce.visitInstruction(new QuickBranchInstruction(QuickBranchInstruction.Operation.NE, if13,

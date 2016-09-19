@@ -132,6 +132,7 @@ public class QuickBranchInstruction extends Instruction implements Jump {
     return "QB" + operation + " " +
         "offset=" + offset +
         ", " + srcRegister +
-        ", " + (op2IsRegister ? Register.ofMask(op2).toString() : op2);
+        ", " + (op2IsRegister ? Register.ofMask(op2).toString() : op2) +
+        commentToString();
   }
 }

@@ -1,5 +1,7 @@
 package com.github.vlsi.pru.plc110;
 
+import com.github.vlsi.pru.plc110.debug.RegisterVariableLocation;
+
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
@@ -30,6 +32,7 @@ public class Pru {
       .slice().order(ByteOrder.LITTLE_ENDIAN);
 
   private List<Instruction> instructionStream = new ArrayList<>();
+  private BinaryCode code;
 
   private int carry;
   private int pc;
@@ -287,6 +290,12 @@ public class Pru {
     setInstructions(Arrays.asList(instructions));
   }
 
+  public void setCode(BinaryCode code) {
+    this.code = code;
+    instructionStream.clear();
+    instructionStream.addAll(code.getInstructions());
+  }
+
   public void setPc(int pc) {
     this.pc = pc;
   }
@@ -355,18 +364,64 @@ public class Pru {
 
     sb.append("Instructions around pc\n");
     for (int i = Math.max(0, pc - 10); i < Math.min(instructionStream.size(), pc + 10); i++) {
-      sb.append(i).append(": ").append(instructionStream.get(i));
+      Instruction ins = instructionStream.get(i);
+      sb.append(i).append(": ").append(ins);
       if (i == pc) {
         sb.append(" // <-- PC");
+      }
+      List<Register> regs = ins.getRegisterOperands();
+      if (regs != null) {
+        sb.append(i == pc ? "; " : " // ");
+
+        for (int regIndex = 0; regIndex < regs.size(); regIndex++) {
+          Register reg = regs.get(regIndex);
+          int val = getReg(reg);
+          if (regIndex > 0) {
+            sb.append(", ");
+          }
+          sb.append(reg).append(" = ").append(Integer.toUnsignedString(val))
+              .append(" (0x").append(Integer.toHexString(val)).append(")");
+        }
       }
       sb.append('\n');
     }
 
-    for (int i = 0; i < 31; i++) {
+    int beforeVariables = sb.length();
+    boolean hasVariables = false;
+    sb.append("\nVariables\n");
+    sb.append("           Name |  Type |    Reg |    Decimal |        Hex\n");
+    sb.append("----------------+-------+--------+------------+------------\n");
+    for (RegisterVariableLocation loc : code.getVarLocations()) {
+      if (loc.start.getOffset() <= pc && pc < loc.end.getOffset()) {
+        hasVariables = true;
+        appendLpad(sb, loc.name, 15).append(" | ");
+        appendLpad(sb, loc.typeName, 5).append(" | ");
+        appendLpad(sb, loc.register.toString(), 6).append(" | ");
+        int val = getReg(loc.register);
+        appendLpad(sb, Integer.toUnsignedString(val), 10).append(" | ");
+        appendLpad(sb, "0x" + Integer.toHexString(val), 10);
+        sb.append('\n');
+      }
+    }
+
+    if (!hasVariables) {
+      sb.setLength(beforeVariables);
+    }
+
+    int beforeRegisters = sb.length();
+    sb.append("\nRegisters\n");
+    sb.append("       Hex     |    Decimal ||    w2 |    w1 |    w0 ||  b3 |  b2 |  b1 |  b0\n");
+    sb.append("---------------+------------++-------+-------+-------++-----+-----+-----+-----\n");
+    boolean haveNonZeroRegister = false;
+    for (int i = 0; i <= 31; i++) {
       int reg = getReg(new Register(i, RegisterField.dw));
-      if (i > 5 && reg == 0) {
+      if (reg == 0) {
+        if (haveNonZeroRegister && sb.indexOf("...\n", sb.length() - 4) == -1) {
+          sb.append("...\n");
+        }
         continue;
       }
+      haveNonZeroRegister = true;
       sb.append("R").append(i).append(": ");
       String hex = Integer.toUnsignedString(reg, 16);
       sb.append("0x");
@@ -374,32 +429,38 @@ public class Pru {
         sb.append('0');
       }
       sb.append(hex);
-      sb.append(" ");
+      sb.append(" | ");
       appendLpad(sb, reg, 10);
-      sb.append(", w2: ");
+      sb.append(" || ");
       appendLpad(sb, (reg >> 16) & 0xffff, 5);
-      sb.append(", w1: ");
+      sb.append(" | ");
       appendLpad(sb, (reg >> 8) & 0xffff, 5);
-      sb.append(", w0: ");
+      sb.append(" | ");
       appendLpad(sb, reg & 0xffff, 5);
-      sb.append(", b3: ");
+      sb.append(" || ");
       appendLpad(sb, (reg >>> 24) & 0xff, 3);
-      sb.append(", b2: ");
+      sb.append(" | ");
       appendLpad(sb, (reg >>> 16) & 0xff, 3);
-      sb.append(", b1: ");
+      sb.append(" | ");
       appendLpad(sb, (reg >>> 8) & 0xff, 3);
-      sb.append(", b0: ");
+      sb.append(" | ");
       appendLpad(sb, reg & 0xff, 3);
       sb.append('\n');
+    }
+    if (!haveNonZeroRegister) {
+      sb.setLength(beforeRegisters);
     }
     return sb.toString();
   }
 
-  private static void appendLpad(StringBuilder sb, int num, int width) {
-    String str = Integer.toString(num);
+  private static StringBuilder appendLpad(StringBuilder sb, int num, int width) {
+    return appendLpad(sb, Integer.toString(num), width);
+  }
+
+  private static StringBuilder appendLpad(StringBuilder sb, String str, int width) {
     for (int i = str.length(); i < width; i++) {
       sb.append(' ');
     }
-    sb.append(str);
+    return sb.append(str);
   }
 }

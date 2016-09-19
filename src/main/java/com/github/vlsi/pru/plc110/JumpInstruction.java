@@ -70,6 +70,7 @@ public class JumpInstruction extends Format2Instruction implements Jump {
   public String toString() {
     return op + " " +
         (op == Operation.JAL ? ", dstRegister=" + dstRegister : "") +
-        ", " + (op2IsRegister ? Register.ofMask(op2).toString() : op2);
+        ", " + (op2IsRegister ? Register.ofMask(op2).toString() : op2) +
+        commentToString();
   }
 }

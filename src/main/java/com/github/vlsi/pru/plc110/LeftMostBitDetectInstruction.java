@@ -53,6 +53,7 @@ public class LeftMostBitDetectInstruction extends Format2Instruction {
     return op + " " +
         dstRegister +
         ", " + srcRegister +
-        ", " + (op2IsRegister ? Register.ofMask(op2).toString() : op2);
+        ", " + (op2IsRegister ? Register.ofMask(op2).toString() : op2) +
+        commentToString();
   }
 }

@@ -1,8 +1,8 @@
 package com.github.vlsi.pru;
 
 import com.github.vlsi.pru.plc110.ArithmeticInstruction;
+import com.github.vlsi.pru.plc110.BinaryCode;
 import com.github.vlsi.pru.plc110.CodeEmitter;
-import com.github.vlsi.pru.plc110.Instruction;
 import com.github.vlsi.pru.plc110.Label;
 import com.github.vlsi.pru.plc110.LdiInstruction;
 import com.github.vlsi.pru.plc110.MemoryTransferInstruction;
@@ -15,7 +15,6 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import java.util.Iterator;
-import java.util.List;
 import java.util.function.Consumer;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -54,10 +53,10 @@ public class CycleWaitBlockTest {
 
     Assert.assertTrue(codeStart.getOffset() > 0, "codeStart label should be initialized");
 
-    List<Instruction> instructions = ce.visitEnd();
+    BinaryCode code = ce.visitEnd();
 
     Pru pru = new Pru();
-    pru.setInstructions(instructions);
+    pru.setCode(code);
 
     int lastCycleStart = 0;
     int startOffset = codeStart.getOffset();

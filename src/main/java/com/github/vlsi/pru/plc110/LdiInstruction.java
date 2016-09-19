@@ -1,5 +1,8 @@
 package com.github.vlsi.pru.plc110;
 
+import java.util.Arrays;
+import java.util.List;
+
 public class LdiInstruction extends Format2Instruction {
   public final Register dstRegister;
   public final short value;
@@ -26,6 +29,7 @@ public class LdiInstruction extends Format2Instruction {
   public String toString() {
     return op + " " +
         dstRegister +
-        ", " + value;
+        ", " + value +
+        commentToString();
   }
 }
