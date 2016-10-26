@@ -32,7 +32,7 @@ Changelog
 
 v1.0.0-SNAPSHOT
 - Supported instructions: arithmetic, LMBD, LDI, JAL, JMP, QB, LBBO/SBBO, LBCO/SBCO
-- Not yet implemented: SCAN, HLT, SLP
+- Not yet implemented: SCAN, SLP
 
 Author
 ------
