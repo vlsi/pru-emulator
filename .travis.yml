@@ -22,4 +22,4 @@ script:
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
-  - "test $TRAVIS_PULL_REQUEST == 'false' && test $TRAVIS_BRANCH == 'master' && test x$SONATYPE_USERNAME != x && mvn deploy -B -V -P release-artifacts --settings settings.xml"
+  - "test $TRAVIS_PULL_REQUEST == 'false' && test $TRAVIS_BRANCH == 'master' && test x$SONATYPE_USERNAME != x && mvn deploy -B -V -P release-artifacts --settings settings.xml -DskipTests"
