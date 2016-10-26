@@ -36,8 +36,11 @@ public abstract class Format2Instruction extends Instruction {
         return new JumpInstruction(code);
       case 3:
         return new LeftMostBitDetectInstruction(code);
+      case 5:
+        return new HaltInstruction();
       default:
-        throw new IllegalArgumentException("Unsupported format 2 instruction code " + op);
+        throw new IllegalArgumentException(
+            "Unsupported format 2 instruction code " + op + ", " + Integer.toHexString(code));
     }
   }
 }

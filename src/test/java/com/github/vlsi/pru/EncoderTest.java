@@ -1,6 +1,8 @@
 package com.github.vlsi.pru;
 
+import com.github.vlsi.pru.plc110.Label;
 import com.github.vlsi.pru.plc110.MemoryTransferInstruction;
+import com.github.vlsi.pru.plc110.QuickBranchInstruction;
 import com.github.vlsi.pru.plc110.Register;
 import com.github.vlsi.pru.plc110.RegisterField;
 import org.testng.Assert;
@@ -32,7 +34,15 @@ public class EncoderTest {
             .setLength(2)
             .encode();
     String actual = ins.toString();
-    Assert.assertEquals(actual, "LBCO R2.w0, C3, 0, 2");
+    Assert.assertEquals(actual, "LBCO R2.b0, C3, 0, 2");
     Assert.assertEquals(new MemoryTransferInstruction(ins.code).toString(), "LBCO R2.b0, C3, 0, 2");
+  }
+
+  @Test
+  public void qba10() {
+    Label l = new Label("+10").setRelativeOffset(10);
+    QuickBranchInstruction qba = new QuickBranchInstruction(l);
+    qba.resolveTarget(0);
+    Assert.assertEquals(Integer.toHexString(qba.code), "7900000a");
   }
 }

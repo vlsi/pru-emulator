@@ -68,11 +68,14 @@ public class QuickBranchInstruction extends Instruction implements Jump {
             | (op2IsRegister ? 0 : 1 << 24)
             | ((op2 & 0xff) << 16)
             | (srcRegister.mask() << 8),
-        (short) (target.getOffset() == -1 ? 0 : target.getOffset())));
-    assert offset < 1 << 10 && offset >= -1 << 10
-        : "Branch offset should fit into 10 bits. Given " + offset;
+        (short) (target.getType() == Label.LabelType.RELATIVE ? target.getRelativeOffset() : 0))
+    );
     this.operation = op;
-    this.offset = (short) (target.getOffset() == -1 ? 0 : target.getOffset());
+    if (target.getType() == Label.LabelType.RELATIVE) {
+      this.offset = (short) target.getRelativeOffset();
+    } else {
+      this.offset = Short.MAX_VALUE;
+    }
     this.op2IsRegister = op2IsRegister;
     this.op2 = op2 & 0xff;
     this.srcRegister = srcRegister;
@@ -96,18 +99,25 @@ public class QuickBranchInstruction extends Instruction implements Jump {
 
   public QuickBranchInstruction(
       Label target) {
-    this(Operation.A, target, new Register(1, RegisterField.dw), false, (byte) 0);
+    this(Operation.A, target, new Register(0, RegisterField.b0), false, (byte) 0);
   }
 
   private static int updateOffset(int code, short offset) {
-    return (code & ~(0b11 << 25 | 0xff))
+    assertOffset10bit(offset);
+    return (code & ~((0b11 << 25) | 0xff))
         | (((offset >> 8) & 0b11) << 25)
         | (offset & 0xff);
   }
 
   public void setOffset(short offset) {
+    assertOffset10bit(offset);
     this.code = updateOffset(code, offset);
     this.offset = offset;
+  }
+
+  private static void assertOffset10bit(short offset) {
+    assert offset <= 511 && offset >= -512
+        : "Branch offset should fit into 10 bits. Given " + offset;
   }
 
   @Override
@@ -120,7 +130,7 @@ public class QuickBranchInstruction extends Instruction implements Jump {
     if (target == null) {
       return;
     }
-    setOffset((short) (target.getOffset() - sourceOffset));
+    setOffset((short) target.computeOffsetRelativeTo(sourceOffset));
   }
 
   public boolean isBitTest() {

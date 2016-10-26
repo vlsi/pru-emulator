@@ -6,7 +6,10 @@ import com.github.vlsi.pru.plc110.Instruction;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
+import java.io.FileInputStream;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.channels.FileChannel;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -40,6 +43,12 @@ public class DecoderTest {
   public void decodeNot() {
     assertDecode("NOT R1, R1, 0",
         0x1700e1e1);
+  }
+
+  @Test
+  public void decodeNot2() {
+    assertDecode("SET R30, R30, R16.b1",
+        0x1e30fefe);
   }
 
   @Test

@@ -20,7 +20,7 @@ public class CodeEmitter {
   }
 
   public void visitLabel(Label label) {
-    label.setOffset(result.size());
+    label.setAbsoluteOffset(result.size());
   }
 
   public void visitRegisterVariable(String name, String typeName, Label start, Label end, Register reg) {
@@ -31,16 +31,16 @@ public class CodeEmitter {
     for (Integer i : jumpInstructions) {
       Jump jump = (Jump) result.get(i);
       Label target = jump.getTarget();
-      if (target.getOffset() == -1) {
+      if (!target.isInitialized()) {
         throw new IllegalStateException("Unresolved jump target " + target + " for jump instruction " + jump);
       }
       jump.resolveTarget(i);
     }
     for (RegisterVariableLocation var : varLocations) {
-      if (var.start.getOffset() == -1) {
+      if (!var.start.isInitialized()) {
         throw new IllegalStateException("Unresolved start location for variable " + var.name);
       }
-      if (var.end.getOffset() == -1) {
+      if (!var.end.isInitialized()) {
         throw new IllegalStateException("Unresolved end location for variable " + var.name);
       }
     }

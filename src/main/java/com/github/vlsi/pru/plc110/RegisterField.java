@@ -17,7 +17,7 @@ public enum RegisterField {
 
   RegisterField(int bitWidth) {
     this.bitWidth = bitWidth;
-    this.bitMask = (1 << bitWidth) - 1;
+    this.bitMask = (int) ((1L << bitWidth) - 1);
   }
 
   public int getBitWidth() {

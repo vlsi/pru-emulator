@@ -49,7 +49,8 @@ public class JumpInstruction extends Format2Instruction implements Jump {
       Label target,
       Register dstRegister
   ) {
-    this(op, false, target.getOffset() == -1 ? 0 : target.getOffset(), dstRegister, target);
+    this(op, false, target.getType() == Label.LabelType.ABSOLUTE ? target.getAbsoluteOffset() : -1,
+        dstRegister, target);
   }
 
   @Override
@@ -62,7 +63,8 @@ public class JumpInstruction extends Format2Instruction implements Jump {
     if (target == null) {
       return;
     }
-    this.op2 = target.getOffset();
+    this.op2 = target.getAbsoluteOffset();
+    assert op2 >= 0 && op2 < 1023 : "Jump absolute location should be in 0..1023. Given offset " + op2;
     this.code = (this.code & ~(0xffff << 8)) | ((op2 & 0xffff) << 8);
   }
 

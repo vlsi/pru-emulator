@@ -40,6 +40,9 @@ public class MemoryTransferInstruction extends Instruction {
       Register srcDst) {
     super(0);
     this.op = op;
+    if (srcDst.field().getBitWidth() != 8) {
+      srcDst = new Register(srcDst.index(), RegisterField.b(srcDst.field().byteOffset()));
+    }
     this.srcDst = srcDst;
   }
 
@@ -143,7 +146,7 @@ public class MemoryTransferInstruction extends Instruction {
         " " +
         srcDst +
         ", " + (addrIsRegister ? Register.ofMask(addr).toString() : ("C" + addr)) +
-        ", " + (offsetIsRegister ? Register.ofMask(offset).toString() : offset) +
+        ", " + (offsetIsRegister ? Register.ofMask(offset & 0xff).toString() : offset & 0xff) +
         ", " + (lengthIsRegister() ? getLengthField() : getLengthByte()) +
         commentToString();
   }

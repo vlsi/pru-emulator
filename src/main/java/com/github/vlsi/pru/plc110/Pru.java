@@ -38,11 +38,36 @@ public class Pru {
   private int pc;
 
   private int cycleCount;
+  private int cycleCountNonReset;
   private int memoryTransferCyclesLeft;
+  private int memoryTransferStarted;
+
+  public final int cpuId;
+
+  public Pru() {
+    this(0);
+  }
+
+  public Pru(int cpuId) {
+    this.cpuId = cpuId;
+  }
+
+  public int runTillHalt(int timeout) {
+    int maxPc = instructionStream.size();
+    for (int time = 0; time < timeout; time++) {
+      if (pc == maxPc) {
+        return time;
+      }
+      tick();
+    }
+    throw new IllegalStateException(
+        "Unable to finish execution in " + timeout + " ticks. " + printState());
+  }
 
   public void tick() {
     Instruction ins = instructionStream.get(pc);
     cycleCount++;
+    cycleCountNonReset++;
     if (ins instanceof ArithmeticInstruction) {
       execArithmetic((ArithmeticInstruction) ins);
       pc++;
@@ -61,6 +86,7 @@ public class Pru {
         setReg(jmp.dstRegister, pc + 1);
       }
       pc = getOp2(jmp.op2, jmp.op2IsRegister);
+      return;
     }
     if (ins instanceof LeftMostBitDetectInstruction) {
       execLeftMostBitDetect((LeftMostBitDetectInstruction) ins);
@@ -73,6 +99,7 @@ public class Pru {
     }
     if (ins instanceof MemoryTransferInstruction) {
       if (memoryTransferCyclesLeft == 0) {
+        memoryTransferStarted = cycleCount;
         prepareMemoryTransfer((MemoryTransferInstruction) ins);
         return;
       }
@@ -95,10 +122,23 @@ public class Pru {
     }
 
     memoryTransferCyclesLeft = (length + 1) / 2;
+    int offset;
+    if (ins.offsetIsRegister()) {
+      offset = getReg(ins.getOffsetRegister());
+    } else {
+      offset = ins.getOffsetImm();
+    }
+
+    if (ins.op == MemoryTransferInstruction.Operation.LOAD) {
+      if (length <= 2) {
+        memoryTransferCyclesLeft++;
+      }
+      memoryTransferCyclesLeft++; // If offset is non-zero, then one cycle is spent on addition
+    }
   }
 
   private void execMemoryTransfer(MemoryTransferInstruction ins) {
-    cycleCountReg.putInt(0, cycleCount);
+    cycleCountReg.putInt(0, memoryTransferStarted);
     int address;
 
     if (ins.addressIsRegister()) {
@@ -107,7 +147,10 @@ public class Pru {
       byte addrConst = ins.getAddressEntry();
       switch (addrConst) {
         case 3: // PRU0/1 Local Data
-          address = 0x00000000;
+          address = cpuId == 0 ? 0x00000000 : 0x00002000;
+          break;
+        case 4: // PRU1/0 Local Data
+          address = cpuId == 0 ? 0x00002000 : 0x00000000;
           break;
         default:
           throw new IllegalArgumentException(
@@ -148,7 +191,20 @@ public class Pru {
           "Invalid memory access at instruction " + ins + ", cpu state: " + printState(), e);
     }
 
-    cycleCount = cycleCountReg.getInt(0);
+    if (ins.op == MemoryTransferInstruction.Operation.STORE) {
+      int insLength = cycleCount - memoryTransferStarted;
+      int anInt = cycleCountReg.getInt(0);
+      if (anInt != memoryTransferStarted) {
+        cycleCount = anInt + 1;//+(cycleCount-memoryTransferStarted-2);
+//        cycleCount += 4;
+//         counter updated
+      } else {
+//        cycleCount--;
+//         counter not updated
+      }
+//    cycleCount = cycleCountReg.getInt(0);
+//      cycleCount = anInt;
+    }
   }
 
   private void execLeftMostBitDetect(LeftMostBitDetectInstruction ins) {
@@ -205,7 +261,7 @@ public class Pru {
         res = src << (op2 & 0x1f);
         break;
       case LSR:
-        res = src >> (op2 & 0x1f); // TODO: >> or >>> ?
+        res = src >>> (op2 & 0x1f);
         break;
       case RSB: {
         long resLong = op2 - Integer.toUnsignedLong(src);
@@ -268,12 +324,12 @@ public class Pru {
     } else {
       QuickBranchInstruction.Operation op = ins.operation;
 
-      if (!(op == QuickBranchInstruction.Operation.LT && op2 < op1
+      if (!(op == QuickBranchInstruction.Operation.LT && Integer.compareUnsigned(op2, op1) < 0
           || op == QuickBranchInstruction.Operation.EQ && op2 == op1
-          || op == QuickBranchInstruction.Operation.LE && op2 <= op1
-          || op == QuickBranchInstruction.Operation.GT && op2 > op1
+          || op == QuickBranchInstruction.Operation.LE && Integer.compareUnsigned(op2, op1) <= 0
+          || op == QuickBranchInstruction.Operation.GT && Integer.compareUnsigned(op2, op1) > 0
           || op == QuickBranchInstruction.Operation.NE && op2 != op1
-          || op == QuickBranchInstruction.Operation.GE && op2 >= op1
+          || op == QuickBranchInstruction.Operation.GE && Integer.compareUnsigned(op2, op1) >= 0
           || op == QuickBranchInstruction.Operation.A)) {
         return pc + 1;
       }
@@ -306,6 +362,10 @@ public class Pru {
 
   public int getCycleCount() {
     return cycleCount;
+  }
+
+  public int getCycleCountNonReset() {
+    return cycleCountNonReset;
   }
 
   public ByteBuffer ram() {
@@ -392,7 +452,7 @@ public class Pru {
     sb.append("           Name |  Type |    Reg |    Decimal |        Hex\n");
     sb.append("----------------+-------+--------+------------+------------\n");
     for (RegisterVariableLocation loc : code.getVarLocations()) {
-      if (loc.start.getOffset() <= pc && pc < loc.end.getOffset()) {
+      if (loc.start.getAbsoluteOffset() <= pc && pc < loc.end.getAbsoluteOffset()) {
         hasVariables = true;
         appendLpad(sb, loc.name, 15).append(" | ");
         appendLpad(sb, loc.typeName, 5).append(" | ");

@@ -6,6 +6,10 @@ import java.util.List;
 
 public class Decoder {
   public List<Instruction> decode(ByteBuffer bb) {
+    return decode(bb, false);
+  }
+
+  public List<Instruction> decode(ByteBuffer bb, boolean ignoreInvalid) {
     List<Instruction> res = new ArrayList<>();
     while (bb.hasRemaining()) {
       int code = bb.getInt();
@@ -13,8 +17,12 @@ public class Decoder {
       try {
         ins = Instruction.of(code);
       } catch (IllegalArgumentException e) {
-        throw new IllegalArgumentException(
-            "Instruction " + (bb.position() - 4) / 4 + " is invalid: " + e.getMessage(), e);
+        if (ignoreInvalid) {
+          ins = new IllegalInstruction(code);
+        } else {
+          throw new IllegalArgumentException(
+              "Instruction " + (bb.position() - 4) / 4 + " is invalid: " + e.getMessage(), e);
+        }
       }
       res.add(ins);
     }

@@ -15,7 +15,6 @@ import com.github.vlsi.pru.plc110.Label;
 import com.github.vlsi.pru.plc110.LdiInstruction;
 import com.github.vlsi.pru.plc110.Pru;
 import com.github.vlsi.pru.plc110.QuickBranchInstruction;
-import com.github.vlsi.pru.plc110.RegisterField;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
@@ -63,7 +62,7 @@ public class CpuEmulatorTest {
     ByteBuffer bb = ByteBuffer.allocate(4);
     int offset = -43;
     bb.putInt(new QuickBranchInstruction(
-        QuickBranchInstruction.Operation.GT, new Label("test", offset),
+        QuickBranchInstruction.Operation.GT, new Label("test").setRelativeOffset(offset),
         R1_w1,
         (byte) 42).code);
     bb.flip();

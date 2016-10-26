@@ -4,6 +4,7 @@ import static com.github.vlsi.pru.CommonRegisters.R1_b0;
 import static com.github.vlsi.pru.CommonRegisters.R1_b1;
 
 import com.github.vlsi.pru.plc110.ArithmeticInstruction;
+import com.github.vlsi.pru.plc110.CodeEmitter;
 import com.github.vlsi.pru.plc110.Label;
 import com.github.vlsi.pru.plc110.Pru;
 import com.github.vlsi.pru.plc110.QuickBranchInstruction;
@@ -20,24 +21,31 @@ public class GtByteEmulatorTest {
 
   @BeforeClass
   public void setup() {
-    cpu.setInstructions(
+    CodeEmitter ce = new CodeEmitter();
+    Label gt = new Label("test");
+    ce.visitInstruction(
         new QuickBranchInstruction(
             QuickBranchInstruction.Operation.GT,
-            new Label("test", 3), R1_b0,
+            gt, R1_b0,
             (byte) 42
-        ),
+        ));
+    ce.visitInstruction(
         new ArithmeticInstruction(
             ArithmeticInstruction.Operation.ADD,
             R1_b1,
             R1_b1,
-            (byte) 1),
-        new QuickBranchInstruction(new Label("end", 2)),
+            (byte) 1));
+    Label end = new Label("end");
+    ce.visitInstruction(new QuickBranchInstruction(end));
+    ce.visitLabel(gt);
+    ce.visitInstruction(
         new ArithmeticInstruction(
             ArithmeticInstruction.Operation.ADD,
             R1_b1,
             R1_b1,
-            (byte) 2)
-    );
+            (byte) 2));
+    ce.visitLabel(end);
+    cpu.setInstructions(ce.visitEnd().getInstructions());
   }
 
   private void run() {
